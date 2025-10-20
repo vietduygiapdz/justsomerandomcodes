@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Tri ân</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      overflow: hidden;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+
+    #scene-container {
+      width: 100vw;
+      height: 100vh;
+      perspective: 1500px;
+      overflow: hidden;
+    }
+
+    #scene {
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform: rotateX(0deg) rotateY(0deg) scale(0.85);
+      transition: transform 0.1s linear;
+      position: relative;
+    }
+
+    .falling {
+      position: absolute;
+      top: -10vh;
+      transform-style: preserve-3d;
+      transition: opacity 0.1s;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0) translateZ(var(--depth)); opacity: 1; }
+      100% { transform: translateY(120vh) translateZ(var(--depth)); opacity: 0; }
+    }
+
+    @keyframes colorShift {
+      0%   { color: #ffb6c1; }
+      14%  { color: #c9f9ff; }
+      28%  { color: #f8f8ff; }
+      42%  { color: #b2fefa; }
+      57%  { color: #ffdee9; }
+      71%  { color: #c9f9ff; }
+      85%  { color: #f8f8ff; }
+      100% { color: #ffb6c1; }
+    }
+
+    .text {
+      font-size: 14px;
+      color: #ffb6c1;
+      text-shadow: 0 0 10px #ff69b4;
+      will-change: transform, opacity;
+    }
+
+    .animate-text {
+      animation: fall 6s linear forwards, colorShift 8s ease-in-out infinite;
+    }
+
+    .heart {
+      font-size: 12px;
+      color: pink;
+    }
+
+    .animate-heart {
+      animation: fall 5s linear forwards;
+    }
+
+    #intro, #playButton {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 10;
+    }
+
+    #intro {
+      top: 38%;
+      color: #ffc0cb;
+      font-size: 16px;
+      text-shadow: 0 0 10px #ff69b4;
+      margin-bottom: 8px;
+    }
+
+    #playButton {
+      top: calc(38% + 40px);
+      background: #ff69b4;
+      border: none;
+      color: white;
+      font-size: 16px;
+      padding: 8px 20px;
+      border-radius: 30px;
+      box-shadow: 0 0 10px #ff69b4;
+      cursor: pointer;
+    }
+
+    #bgm {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .text { font-size: 12px; }
+      .heart { font-size: 10px; }
+      #intro { font-size: 14px; }
+      #playButton {
+        font-size: 14px;
+        padding: 6px 16px;
+      }
+    }
+
+    .hidden {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10vh) translateZ(var(--depth));
+      animation: none !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="intro"></div>
+<button id="playButton">Bắt đầu</button>
+
+<audio id="bgm" loop>
+  <source src="https://raw.githubusercontent.com/vietduygiapdz/trian/2cf63699435b2e1607d98e202a5ea72af1bdaf48/utomp3.com%20-%20M%C3%ACnh%20C%C3%B9ng%20Nhau%20%C4%90%C3%B3ng%20B%C4%83ng%20%20Th%C3%B9y%20Chi%20%20FPT%20Polytechnic.mp3" type="audio/mpeg">
+  Trình duyệt của bạn không hỗ trợ phát nhạc.
+</audio>
+
+<div id="scene-container">
+  <div id="scene"></div>
+</div>
+
+<script>
+  const messages = [
+    "Chúc toàn thể các bạn nữ trong nhóm 20/10 vui vẻ, hạnh phúc. ",
+    "Chúc các bạn sẽ đạt được thật nhiều điểm A, A+!",
+    "Cảm ơn nửa còn lại của anh em con trai!",
+    "Chúc các con vk sẽ luôn xinh đẹp và giữ mãi nụ cười trên môi=))))",
+    "Chúc chị em không chỉ 20/10 mà 365 ngày đều vui, đều xinh, đều chill và được yêu thương đúng cách!",
+    "Mong rằng điện thoại chị em sẽ có thêm nhiều tiếng ting ting chuyển tiền, chứ không phải tin nhắn muộn phiền từ Zalo.",
+    "Cảm ơn mọi người vì đã là một phần trong kí ức của anh em con trai chúng tôi=)))))."
+  ];
+
+  const hearts = ["💗", "💓", "💖", "💞", "💝", "❤️", "💕", "✨"];
+  const scene = document.getElementById('scene');
+
+  for (let i = 0; i < 150; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.top = `${Math.random() * 100}vh`;
+    star.style.left = `${Math.random() * 100}vw`;
+    star.style.animationDuration = `${2 + Math.random() * 3}s`;
+    document.body.appendChild(star);
+  }
+
+  const textElements = messages.map(msg => {
+    const el = document.createElement('div');
+    el.className = 'falling text hidden';
+    const z = Math.floor(Math.random() * 1000) - 600;
+    el.style.left = `${Math.random() * 80}vw`;
+    el.style.setProperty('--depth', `${z}px`);
+    el.innerText = msg;
+    scene.appendChild(el);
+    return el;
+  });
+
+ 
+  const heartElements = [];
+  for (let i = 0; i < 50; i++) {
+    const el = document.createElement('div');
+    el.className = 'falling heart hidden';
+    const z = Math.floor(Math.random() * 1000) - 600;
+    el.style.left = `${Math.random() * 100}vw`;
+    el.style.setProperty('--depth', `${z}px`);
+    el.innerText = hearts[Math.floor(Math.random() * hearts.length)];
+    scene.appendChild(el);
+    heartElements.push(el);
+  }
+
+  let rotateX = 0;
+  let rotateY = 0;
+  let scale = 0.85;
+  let startX, startY;
+
+  function onStart(e) {
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    document.addEventListener(e.type === 'touchstart' ? 'touchmove' : 'mousemove', onMove);
+    document.addEventListener(e.type === 'touchstart' ? 'touchend' : 'mouseup', onEnd);
+  }
+
+  function onMove(e) {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = x - startX;
+    const dy = y - startY;
+    rotateY += dx * 0.2;
+    rotateX -= dy * 0.2;
+    scene.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${scale})`;
+    startX = x;
+    startY = y;
+  }
+
+  function onEnd() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+  }
+
+  document.addEventListener("wheel", function(e) {
+    e.preventDefault();
+    scale += e.deltaY * -0.001;
+    scale = Math.min(Math.max(0.5, scale), 2);
+    scene.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${scale})`;
+  }, { passive: false });
+
+  scene.addEventListener('mousedown', onStart);
+  scene.addEventListener('touchstart', onStart);
+
+  function startFalling(element, duration, delay) {
+    element.classList.remove('hidden');
+    element.style.opacity = '0';
+    setTimeout(() => {
+      element.style.opacity = '1';
+      element.style.animationDuration = `${duration}s`;
+      element.style.animationDelay = '0s';
+      element.classList.add(element.classList.contains('text') ? 'animate-text' : 'animate-heart');
+
+      element.addEventListener('animationend', () => {
+        element.classList.remove('animate-text', 'animate-heart');
+        element.classList.add('hidden');
+        // Immediate or minimal delay for next fall
+        setTimeout(() => {
+          const newDuration = element.classList.contains('text') ? 6 + Math.random() * 6 : 5 + Math.random() * 5;
+          const newDelay = Math.random() * 0.2; // Very short delay to avoid gaps
+          startFalling(element, newDuration, newDelay);
+        }, 0); // Start next fall immediately after animation ends
+      }, { once: true });
+    }, delay * 1000);
+  }
+
+  document.getElementById("playButton").addEventListener("click", () => {
+    document.getElementById("intro").remove();
+    document.getElementById("playButton").remove();
+    document.getElementById("bgm").play();
+
+    // Stagger the start of each text element
+    textElements.forEach((el, index) => {
+      const delay = index * 0.2 + Math.random() * 0.3;
+      const duration = 6 + Math.random() * 6;
+      startFalling(el, duration, delay);
+    });
+
+    // Stagger the start of each heart element
+    heartElements.forEach((el, index) => {
+      const delay = index * 0.2 + Math.random() * 0.3;
+      const duration = 5 + Math.random() * 5;
+      startFalling(el, duration, delay);
+    });
+  });
+</script>
+
+</body>
+</html>
